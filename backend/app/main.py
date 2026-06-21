@@ -19,6 +19,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def read_root():
+    return {
+        "status": "online",
+        "message": "Public Procurement Payments Tracker API is running",
+        "docs": "/docs",
+        "endpoints": {
+            "filters": "/api/filters",
+            "dashboard": "/api/dashboard",
+            "transactions": "/api/transactions",
+            "export": "/api/export"
+        }
+    }
+
+
 class FilterPayload(BaseModel):
     agencies: Optional[List[str]] = None
     vendors: Optional[List[str]] = None
