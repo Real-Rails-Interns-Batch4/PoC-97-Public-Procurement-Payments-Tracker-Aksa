@@ -104,7 +104,7 @@ To simulate real-world procurement patterns, `backend/app/generator.py` models k
 
 ## 12. Demo Video
 *(Link placeholder for walking through the app)*
-- [Walkthrough Demo Video](https://github.com/Aksa-joy/POC-97-Public-Procurement-Payments-Tracker-Aksa)
+- [Walkthrough Demo Video](https://github.com/Real-Rails-Interns-Batch4/PoC-97-Public-Procurement-Payments-Tracker-Aksa)
 
 ## 13. Installation
 
@@ -172,7 +172,7 @@ To push updates step-by-step to the remote repository:
    ```
 3. **Configuring target remote origin**:
    ```bash
-   git remote add origin https://github.com/Aksa-joy/POC-97-Public-Procurement-Payments-Tracker-Aksa.git
+   git remote add origin https://github.com/Real-Rails-Interns-Batch4/PoC-97-Public-Procurement-Payments-Tracker-Aksa.git
    ```
 4. **Pushing code updates**:
    ```bash
