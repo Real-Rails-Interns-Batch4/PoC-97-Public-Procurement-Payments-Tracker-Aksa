@@ -85,6 +85,8 @@ export interface Transaction {
   payment_amount: number;
   payment_status: string;
   completion_days: number | null;
+  award_source?: string;
+  payment_source?: string;
 }
 
 export async function getFilters(): Promise<{ agencies: string[]; vendors: string[]; contract_types: string[] }> {

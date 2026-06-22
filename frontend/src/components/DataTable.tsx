@@ -23,19 +23,39 @@ export const DataTable: React.FC<DataTableProps> = ({ data, onExport }) => {
   const columns = useMemo(
     () => [
       columnHelper.accessor("award_id", {
-        header: "Award ID",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Award ID
+          </span>
+        ),
         cell: (info) => <span className="font-mono text-xs font-semibold text-gray-300">{info.getValue()}</span>,
       }),
       columnHelper.accessor("agency_name", {
-        header: "Agency",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            Agency
+          </span>
+        ),
         cell: (info) => <span className="truncate max-w-[120px] block text-gray-400">{info.getValue()}</span>,
       }),
       columnHelper.accessor("vendor_name", {
-        header: "Vendor",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            Vendor
+          </span>
+        ),
         cell: (info) => <span className="truncate max-w-[120px] block text-gray-300 font-medium">{info.getValue()}</span>,
       }),
       columnHelper.accessor("award_amount", {
-        header: "Award Val",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            Award Val
+          </span>
+        ),
         cell: (info) => (
           <span className="font-bold text-gray-200">
             ${info.getValue().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -43,11 +63,21 @@ export const DataTable: React.FC<DataTableProps> = ({ data, onExport }) => {
         ),
       }),
       columnHelper.accessor("invoice_id", {
-        header: "Invoice ID",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+            Invoice ID
+          </span>
+        ),
         cell: (info) => <span className="font-mono text-[10px] text-gray-400">{info.getValue()}</span>,
       }),
       columnHelper.accessor("invoice_amount", {
-        header: "Invoice Val",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+            Invoice Val
+          </span>
+        ),
         cell: (info) => (
           <span className="text-gray-300">
             ${info.getValue().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -55,7 +85,12 @@ export const DataTable: React.FC<DataTableProps> = ({ data, onExport }) => {
         ),
       }),
       columnHelper.accessor("payment_status", {
-        header: "Payment Status",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+            Payment Status
+          </span>
+        ),
         cell: (info) => {
           const val = info.getValue();
           let color = "text-gray-400 bg-gray-900 border-gray-800";
@@ -71,7 +106,12 @@ export const DataTable: React.FC<DataTableProps> = ({ data, onExport }) => {
         },
       }),
       columnHelper.accessor("completion_days", {
-        header: "Time to Pay",
+        header: () => (
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+            Time to Pay
+          </span>
+        ),
         cell: (info) => {
           const val = info.getValue();
           if (val === null) return <span className="text-gray-500">—</span>;
@@ -81,6 +121,26 @@ export const DataTable: React.FC<DataTableProps> = ({ data, onExport }) => {
           else if (val > 20) color = "text-amber-400";
           
           return <span className={color}>{val} days</span>;
+        },
+      }),
+      columnHelper.accessor("award_source", {
+        header: () => (
+          <span className="flex items-center gap-1">
+            Source Split
+          </span>
+        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <div className="flex flex-col gap-1 text-[9px] font-semibold">
+              <span className="text-emerald-400 bg-emerald-950/20 px-1.5 py-0.5 rounded border border-emerald-900/30 truncate max-w-[110px] text-center font-mono">
+                {row.award_source ? "🟢 " + row.award_source.replace("Real (", "").replace(")", "") : "🟢 USAspending"}
+              </span>
+              <span className="text-amber-400 bg-amber-950/20 px-1.5 py-0.5 rounded border border-amber-900/30 truncate max-w-[110px] text-center font-mono">
+                {row.payment_source ? "🟠 " + row.payment_source.replace("Synthetic (", "").replace(")", "") : "🟠 Simulated"}
+              </span>
+            </div>
+          );
         },
       }),
     ],

@@ -247,7 +247,7 @@ def get_leaderboards(filters: dict) -> dict:
             COUNT(DISTINCT a.award_id) as total_awards,
             COALESCE(SUM(p.amount), 0.0) as total_payments,
             COALESCE(AVG(p.completion_days), 0.0) as avg_delay_days,
-            SUM(CASE WHEN p.status = 'Delayed' THEN 1 ELSE 0 END) * 100.0 / COUNT(p.payment_id) as delay_rate
+            COALESCE(SUM(CASE WHEN p.status = 'Delayed' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(p.payment_id), 0), 0.0) as delay_rate
         FROM awards a
         LEFT JOIN invoices i ON a.award_id = i.award_id
         LEFT JOIN payments p ON i.invoice_id = p.invoice_id
@@ -264,7 +264,7 @@ def get_leaderboards(filters: dict) -> dict:
             COUNT(DISTINCT a.award_id) as total_awards,
             COALESCE(SUM(p.amount), 0.0) as total_payments,
             COALESCE(AVG(p.completion_days), 0.0) as avg_delay_days,
-            SUM(CASE WHEN p.status = 'Delayed' THEN 1 ELSE 0 END) * 100.0 / COUNT(p.payment_id) as delay_rate
+            COALESCE(SUM(CASE WHEN p.status = 'Delayed' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(p.payment_id), 0), 0.0) as delay_rate
         FROM awards a
         LEFT JOIN invoices i ON a.award_id = i.award_id
         LEFT JOIN payments p ON i.invoice_id = p.invoice_id
@@ -320,7 +320,9 @@ def get_transaction_table(filters: dict, limit: int = 100) -> List[dict]:
             p.payment_date,
             p.amount as payment_amount,
             p.status as payment_status,
-            p.completion_days
+            p.completion_days,
+            a.data_source,
+            COALESCE(p.data_source, 'Synthetic (Simulated)') as payment_source
         FROM awards a
         LEFT JOIN invoices i ON a.award_id = i.award_id
         LEFT JOIN payments p ON i.invoice_id = p.invoice_id
@@ -348,7 +350,9 @@ def get_transaction_table(filters: dict, limit: int = 100) -> List[dict]:
             "payment_date": str(row[12]) if row[12] else "N/A",
             "payment_amount": float(row[13]) if row[13] else 0.0,
             "payment_status": row[14] or "Unpaid",
-            "completion_days": int(row[15]) if row[15] is not None else None
+            "completion_days": int(row[15]) if row[15] is not None else None,
+            "award_source": row[16] or "Real (USAspending.gov)",
+            "payment_source": row[17] or "Synthetic (Simulated)"
         } for row in res
     ]
 

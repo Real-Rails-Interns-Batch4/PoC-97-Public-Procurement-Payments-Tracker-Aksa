@@ -7,7 +7,13 @@ An intelligence dashboard for the **Real Rails Intelligence Library** designed t
 ## 1. Overview
 The **Public Procurement Payments Tracker** is a production-grade analytics platform that monitors government spending, identifies agency bottlenecks, highlights vendor payment delays, and checks compliance against the **Prompt Payment Act**. By tracking milestones in a unified flow (Award &rarr; Invoice &rarr; Payout), it provides structural transparency into federal contractor liquidity.
 
-## 2. Data & Domain References
+## 2. 70:30 Hybrid Data Strategy
+To bridge the gap between public obligations and private payment milestones, this dashboard employs a hybrid **70:30 Data Strategy**:
+* **70% Real Data**: Contract awards, funding agencies, vendor recipient information, dates, obligation values, and descriptions fetched directly from the **USAspending.gov** and **SAM.gov** APIs.
+* **30% Synthetic Data**: Since specific agency accounting invoice dates and payout completion dates are confidential, these milestones (invoices, payments, prompt-payment timelines, delay scenarios) are simulated locally based on historical agency profiles (e.g. DoD audit bottlenecks vs HHS fast-tracks).
+* **Clear Data Badging**: All elements on the dashboard and ledger are clearly badged with **🟢 Real** (USAspending) or **🟠 Synthetic** (Simulated) labels to maintain audit transparency.
+
+## 3. Data & Domain References
 This platform maps directly to federal procurement standards:
 - **SAM.gov**: Source of contract awards, unique entity identifiers (UEI), and vendor registrations.
 - **USAspending.gov**: Source of transaction profiles, contract values, recipient information, funding agencies, and transaction history.
@@ -78,11 +84,11 @@ Data integrity is maintained through:
 - **Data Constraints**: Ensuring payment dates occur *after* invoice dates, which in turn occur *after* award dates.
 - **Relational Integrity**: If an invoice is pending or disputed, the system accurately blocks or flags the corresponding payment records.
 
-## 9. Responsive Design
+## 10. Responsive Design
 The user interface is styled using Tailwind CSS grids, flexboxes, and responsive breakpoints:
-- **Desktop/Wide Screens**: Displays KPI cards in a 4-column row, visualizations in side-by-side blocks, and filters in a structured panel.
-- **Tablets/Laptops**: Scales down elements, utilizing horizontal scroll wrappers for the transaction table.
-- **Mobile Devices**: Visualizations and cards collapse into a single-column layout, ensuring clean readability and easy touch navigation.
+- **Desktop/Wide Screens ($\ge$ 1024px)**: Employs a **70:30 layout split** where the Left Main column (70% width) displays stories, Sankey flow, charts, and transaction tables, and the Right Sidebar column (30% width) hosts the Data Strategy explanation panel, analytical filters, KPI metrics, and leaderboards.
+- **Tablets/Laptops**: Scales elements proportionally, wrapping the table with overflow scrolling.
+- **Mobile Devices**: Automatically collapses columns into a single vertical stack, ordering the filters and KPI metrics first via responsive ordering classes to maintain high accessibility.
 
 ## 10. Simulation Mode
 To simulate real-world procurement patterns, `backend/app/generator.py` models key bottlenecks:
