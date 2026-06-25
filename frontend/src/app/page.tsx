@@ -122,9 +122,11 @@ export default function Dashboard() {
 
   // Helper formatting
   const formatCurrency = (val: number) => {
-    if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`;
-    if (val >= 1e6) return `$${(val / 1e6).toFixed(2)}M`;
-    return `$${val.toLocaleString()}`;
+    const num = typeof val === "number" ? val : parseFloat(val as any);
+    if (isNaN(num)) return "$0.00";
+    if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+    if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+    return `$${num.toLocaleString()}`;
   };
 
   return (

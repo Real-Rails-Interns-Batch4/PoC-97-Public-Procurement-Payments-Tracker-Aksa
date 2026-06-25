@@ -59,17 +59,19 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({ data }) => {
       },
       formatter: (params: any) => {
         if (params.dataType === "edge") {
+          const val = Number(params.data?.value ?? 0);
           return `
             <div class="p-1">
               <p class="font-semibold text-gray-400">${params.data.source} &rarr; ${params.data.target}</p>
-              <p class="text-white font-bold mt-1">Amount: $${params.data.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p class="text-white font-bold mt-1">Amount: $${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
           `;
         }
+        const val = Number(params.value ?? 0);
         return `
           <div class="p-1">
             <p class="font-semibold text-indigo-400">${params.name}</p>
-            <p class="text-white mt-1">Total Volume: $${params.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p class="text-white mt-1">Total Volume: $${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
         `;
       },

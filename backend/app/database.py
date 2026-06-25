@@ -13,12 +13,27 @@ DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", 
 def get_connection(read_only: bool = True):
     """
     Returns a connection to the DuckDB database.
-    If the database file does not exist, triggers generation.
+    If the database file does not exist, is empty, or lacks required tables, triggers generation.
     """
-    if not os.path.exists(DB_PATH):
+    db_needs_generation = False
+    if not os.path.exists(DB_PATH) or os.path.getsize(DB_PATH) == 0:
+        db_needs_generation = True
+    else:
+        # Check if tables exist
+        try:
+            conn = duckdb.connect(DB_PATH, read_only=True)
+            tables = [r[0] for r in conn.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='main';").fetchall()]
+            conn.close()
+            if not all(t in tables for t in ["awards", "invoices", "payments"]):
+                db_needs_generation = True
+        except Exception as e:
+            print(f"Error checking database tables: {e}. Triggering regeneration.")
+            db_needs_generation = True
+
+    if db_needs_generation:
         # Dynamically import to avoid circular dependency
         from app.generator import generate_synthetic_data
-        print(f"Database not found at {DB_PATH}. Generating synthetic data...")
+        print(f"Database at {DB_PATH} is missing, empty, or incomplete. Generating synthetic data...")
         generate_synthetic_data(DB_PATH, num_awards=300)
         
     return duckdb.connect(DB_PATH, read_only=read_only)
@@ -76,15 +91,18 @@ def get_kpis(filters: dict) -> dict:
     where_clause, params = build_filter_clause(**filters)
     conn = get_connection()
     
-    # 1. Awards KPIs (distinct counts and sum)
+    # 1. Awards KPIs (distinct counts and sum using a subquery to avoid join inflation)
     awards_q = f"""
         SELECT 
-            COUNT(DISTINCT a.award_id) as total_awards_count,
-            COALESCE(SUM(a.amount), 0.0) as total_awards_amount
-        FROM awards a
-        LEFT JOIN invoices i ON a.award_id = i.award_id
-        LEFT JOIN payments p ON i.invoice_id = p.invoice_id
-        WHERE {where_clause}
+            COUNT(*),
+            COALESCE(SUM(amount), 0.0)
+        FROM (
+            SELECT DISTINCT a.award_id, a.amount 
+            FROM awards a
+            LEFT JOIN invoices i ON a.award_id = i.award_id
+            LEFT JOIN payments p ON i.invoice_id = p.invoice_id
+            WHERE {where_clause}
+        ) sub
     """
     awards_res = conn.execute(awards_q, params).fetchone()
     
@@ -218,7 +236,7 @@ def get_timeline_chart(filters: dict) -> List[dict]:
             STRFTIME(a.award_date, '%Y-%m') as month,
             AVG(EPOCH(i.invoice_date) - EPOCH(a.award_date)) / 86400 as avg_days_to_invoice,
             AVG(p.completion_days) as avg_days_to_payment,
-            COUNT(a.award_id) as award_count
+            COUNT(DISTINCT a.award_id) as award_count
         FROM awards a
         LEFT JOIN invoices i ON a.award_id = i.award_id
         LEFT JOIN payments p ON i.invoice_id = p.invoice_id
@@ -365,11 +383,19 @@ def get_filter_options() -> dict:
     """
     Gets list of unique filter options for dropdowns.
     """
-    conn = get_connection()
-    agencies = [r[0] for r in conn.execute("SELECT DISTINCT agency_name FROM awards ORDER BY agency_name;").fetchall()]
-    vendors = [r[0] for r in conn.execute("SELECT DISTINCT vendor_name FROM awards ORDER BY vendor_name;").fetchall()]
-    contract_types = [r[0] for r in conn.execute("SELECT DISTINCT contract_type FROM awards ORDER BY contract_type;").fetchall()]
-    conn.close()
+    try:
+        conn = get_connection()
+        agencies = [r[0] for r in conn.execute("SELECT DISTINCT agency_name FROM awards WHERE agency_name IS NOT NULL AND agency_name != '' ORDER BY agency_name;").fetchall()]
+        vendors = [r[0] for r in conn.execute("SELECT DISTINCT vendor_name FROM awards WHERE vendor_name IS NOT NULL AND vendor_name != '' ORDER BY vendor_name;").fetchall()]
+        contract_types = [r[0] for r in conn.execute("SELECT DISTINCT contract_type FROM awards WHERE contract_type IS NOT NULL AND contract_type != '' ORDER BY contract_type;").fetchall()]
+        conn.close()
+    except Exception as e:
+        print(f"Error fetching filter options: {e}")
+        return {
+            "agencies": [],
+            "vendors": [],
+            "contract_types": []
+        }
     
     return {
         "agencies": agencies,

@@ -56,11 +56,14 @@ export const DataTable: React.FC<DataTableProps> = ({ data, onExport }) => {
             Award Val
           </span>
         ),
-        cell: (info) => (
-          <span className="font-bold text-gray-200">
-            ${info.getValue().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </span>
-        ),
+        cell: (info) => {
+          const val = Number(info.getValue() ?? 0);
+          return (
+            <span className="font-bold text-gray-200">
+              ${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+          );
+        },
       }),
       columnHelper.accessor("invoice_id", {
         header: () => (
@@ -78,11 +81,14 @@ export const DataTable: React.FC<DataTableProps> = ({ data, onExport }) => {
             Invoice Val
           </span>
         ),
-        cell: (info) => (
-          <span className="text-gray-300">
-            ${info.getValue().toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </span>
-        ),
+        cell: (info) => {
+          const val = Number(info.getValue() ?? 0);
+          return (
+            <span className="text-gray-300">
+              ${val.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </span>
+          );
+        },
       }),
       columnHelper.accessor("payment_status", {
         header: () => (

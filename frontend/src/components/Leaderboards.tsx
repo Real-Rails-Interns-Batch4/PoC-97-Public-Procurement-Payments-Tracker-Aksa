@@ -5,11 +5,13 @@ interface LeaderboardsProps {
   data: LeaderboardsData;
 }
 
-const formatCurrency = (val: number) => {
-  if (val >= 1e9) return `$${(val / 1e9).toFixed(1)}B`;
-  if (val >= 1e6) return `$${(val / 1e6).toFixed(1)}M`;
-  if (val >= 1e3) return `$${(val / 1e3).toFixed(0)}K`;
-  return `$${val.toFixed(0)}`;
+const formatCurrency = (val: any) => {
+  const num = typeof val === "number" ? val : parseFloat(val);
+  if (isNaN(num)) return "$0";
+  if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
+  if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M`;
+  if (num >= 1e3) return `$${(num / 1e3).toFixed(0)}K`;
+  return `$${num.toFixed(0)}`;
 };
 
 export const Leaderboards: React.FC<LeaderboardsProps> = ({ data }) => {

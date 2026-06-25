@@ -32,6 +32,75 @@ VENDORS = seed_data.get("VENDORS", [])
 CONTRACT_TYPES = seed_data.get("CONTRACT_TYPES", [])
 DESCRIPTIONS = seed_data.get("DESCRIPTIONS", {})
 
+def safe_float(val):
+    if val is None:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    try:
+        cleaned = str(val).replace('$', '').replace(',', '').strip()
+        return float(cleaned)
+    except Exception:
+        return 0.0
+
+def standardize_agency_name(raw_name: str) -> str:
+    if not raw_name:
+        return random.choice(AGENCIES)
+    for a in AGENCIES:
+        clean_a = a.split("(")[0].strip().lower()
+        raw_name_lower = raw_name.lower()
+        if clean_a in raw_name_lower or raw_name_lower in clean_a:
+            return a
+    # Specific fallbacks
+    raw_name_lower = raw_name.lower()
+    if "dod" in raw_name_lower or "defense" in raw_name_lower:
+        return "Department of Defense (DoD)"
+    if "hhs" in raw_name_lower or "health" in raw_name_lower:
+        return "Department of Health and Human Services (HHS)"
+    if "dot" in raw_name_lower or "transportation" in raw_name_lower:
+        return "Department of Transportation (DoT)"
+    if "doe" in raw_name_lower or "energy" in raw_name_lower:
+        return "Department of Energy (DoE)"
+    if "va" in raw_name_lower or "veterans" in raw_name_lower:
+        return "Department of Veterans Affairs (VA)"
+    if "dhs" in raw_name_lower or "homeland" in raw_name_lower:
+        return "Department of Homeland Security (DHS)"
+    if "nasa" in raw_name_lower or "aeronautics" in raw_name_lower:
+        return "NASA"
+    return random.choice(AGENCIES)
+
+def standardize_vendor_name(raw_name: str) -> str:
+    if not raw_name:
+        return random.choice(VENDORS)
+    raw_name_lower = raw_name.lower()
+    for v in VENDORS:
+        clean_v = v.replace("Corp.", "").replace("Inc.", "").replace("LLP", "").replace("Technologies", "").strip().lower()
+        if clean_v in raw_name_lower or raw_name_lower in clean_v:
+            return v
+    # Specific abbreviations and patterns
+    if "lockheed" in raw_name_lower:
+        return "Lockheed Martin Corp."
+    if "northrop" in raw_name_lower or "grumman" in raw_name_lower:
+        return "Northrop Grumman Corp."
+    if "pfizer" in raw_name_lower:
+        return "Pfizer Inc."
+    if "raytheon" in raw_name_lower:
+        return "Raytheon Technologies"
+    if "mckesson" in raw_name_lower:
+        return "McKesson Corp."
+    if "general dynamics" in raw_name_lower:
+        return "General Dynamics"
+    if "deloitte" in raw_name_lower:
+        return "Deloitte Consulting LLP"
+    if "booz" in raw_name_lower:
+        return "Booz Allen Hamilton"
+    if "fedex" in raw_name_lower:
+        return "FedEx Government Services"
+    if "carahsoft" in raw_name_lower:
+        return "Carahsoft Technology Corp."
+    return raw_name
+
+
 def fetch_real_awards(limit=300):
     """
     Fetches real contract award records from USAspending.gov.
@@ -86,6 +155,43 @@ def fetch_real_awards(limit=300):
             break
             
     return awards
+
+def fetch_sam_opportunities(limit=50):
+    """
+    Fetches real contract opportunities from SAM.gov.
+    Bypasses SSL certification for proxy compatibility.
+    """
+    import urllib.request
+    import json
+    import ssl
+    from datetime import date, timedelta
+    
+    url = os.getenv("SAM_GOV_API_URL", "https://api.sam.gov/opportunities/v2/search")
+    api_key = os.getenv("SAM_GOV_API_KEY", "")
+    
+    if not api_key:
+        print("SAM_GOV_API_KEY is not configured in environment. Skipping SAM.gov fetch.")
+        return []
+        
+    context = ssl._create_unverified_context()
+    
+    # Form date parameters for query (past 90 days)
+    today = date.today()
+    start_date = (today - timedelta(days=90)).strftime("%m/%d/%Y")
+    end_date = today.strftime("%m/%d/%Y")
+    
+    full_url = f"{url}?api_key={api_key}&postedFrom={start_date}&postedTo={end_date}&limit={limit}"
+    
+    try:
+        print(f"Requesting SAM.gov API: {url} (limit: {limit})")
+        req = urllib.request.Request(full_url, method="GET")
+        with urllib.request.urlopen(req, context=context, timeout=8) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            results = res_data.get("opportunitiesData", [])
+            return results
+    except Exception as e:
+        print(f"Error fetching from SAM.gov API: {e}")
+        return []
 
 def generate_synthetic_data(db_path: str, num_awards: int = 300):
     """
@@ -155,12 +261,81 @@ def generate_synthetic_data(db_path: str, num_awards: int = 300):
     real_records = fetch_real_awards(num_awards)
     print(f"Fetched {len(real_records)} real award records from USAspending.gov.")
     
+    # Try fetching real opportunities from SAM.gov
+    print("Attempting to fetch real opportunities from SAM.gov...")
+    sam_records = fetch_sam_opportunities(limit=50)
+    print(f"Fetched {len(sam_records)} real opportunities from SAM.gov.")
+    
     for i in range(num_awards):
-        # Determine if we use a real record or mock it
-        use_real = i < len(real_records)
+        # Determine data source mapping: SAM.gov first, then USAspending, then fallback mock
+        use_sam = i < len(sam_records)
+        use_real = not use_sam and i < (len(sam_records) + len(real_records))
+
         
-        if use_real:
-            r = real_records[i]
+        if use_sam:
+            r = sam_records[i]
+            notice_id = r.get("noticeId") or r.get("solicitationNumber") or str(uuid.uuid4())
+            award_id = f"AWD-SAM-{notice_id}"
+            
+            if award_id in seen_ids:
+                counter = 2
+                temp_id = f"{award_id}_{counter}"
+                while temp_id in seen_ids:
+                    counter += 1
+                    temp_id = f"{award_id}_{counter}"
+                award_id = temp_id
+            seen_ids.add(award_id)
+            
+            # Extract agency
+            full_path = r.get("fullParentPathName") or ""
+            agency = standardize_agency_name(full_path)
+            
+            # Extract vendor
+            award_info = r.get("award") or {}
+            vendor = None
+            if isinstance(award_info, dict):
+                vendor = (
+                    award_info.get("vendorName") or 
+                    award_info.get("vendor", {}).get("name") or 
+                    award_info.get("awardee", {}).get("name")
+                )
+            vendor = standardize_vendor_name(vendor)
+            
+            # Extract date
+            try:
+                aw_date = datetime.strptime(r.get("postedDate"), "%Y-%m-%d")
+            except Exception:
+                aw_date = start_date + timedelta(days=random.randint(0, 800))
+                
+            # Extract amount
+            amount = 0.0
+            if isinstance(award_info, dict):
+                amount = safe_float(award_info.get("amount"))
+            if amount <= 0:
+                amount = round(random.uniform(50000, 15000000), 2)
+                
+            # Extract contract type
+            contract_type = r.get("type") or r.get("baseType") or ""
+            matched = False
+            for ct in CONTRACT_TYPES:
+                if ct.lower() in str(contract_type).lower():
+                    contract_type = ct
+                    matched = True
+                    break
+            if not matched:
+                contract_type = random.choice(CONTRACT_TYPES)
+                
+            desc = r.get("title") or ""
+            desc = str(desc).strip()
+            if not desc or desc.lower() == "null":
+                desc = f"Real opportunity notice under {agency} fetched from SAM.gov."
+                
+            data_source = "Real (SAM.gov)"
+            
+        elif use_real:
+            # Shift index since real_records starts at 0
+            idx = i - len(sam_records)
+            r = real_records[idx]
             # Map fields safely
             raw_id = r.get("Award ID")
             award_id = f"AWD-USA-{raw_id}" if raw_id else f"AWD-REAL-{2024 + (i % 3)}-{10000 + i}"
@@ -174,20 +349,16 @@ def generate_synthetic_data(db_path: str, num_awards: int = 300):
                 award_id = temp_id
             seen_ids.add(award_id)
             
-            agency = r.get("Awarding Agency") or random.choice(AGENCIES)
-            vendor = r.get("Recipient Name") or random.choice(VENDORS)
-            vendor = str(vendor)[:100]
+            agency = standardize_agency_name(r.get("Awarding Agency"))
+            vendor = standardize_vendor_name(r.get("Recipient Name"))
             
             try:
                 aw_date = datetime.strptime(r.get("Start Date"), "%Y-%m-%d")
             except Exception:
                 aw_date = start_date + timedelta(days=random.randint(0, 800))
                 
-            try:
-                amount = float(r.get("Award Amount") or 0.0)
-                if amount <= 0:
-                    amount = round(random.uniform(50000, 15000000), 2)
-            except Exception:
+            amount = safe_float(r.get("Award Amount"))
+            if amount <= 0:
                 amount = round(random.uniform(50000, 15000000), 2)
                 
             raw_type = r.get("Award Type") or ""
