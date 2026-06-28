@@ -156,10 +156,10 @@ export default function Dashboard() {
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         
-        {/* Main Grid: 70:30 layout */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-10">
+        {/* Main Grid Layout: 70% Wide Main Stage on the left, 30% Intelligence Sidebar on the right */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-10 w-full">
           
-          {/* Main Area (70%) */}
+          {/* Main Area / Wide Main Stage (70%) */}
           <div className="lg:col-span-7 space-y-8">
             
             {/* Storytelling & Strategic Intelligence Section */}
@@ -297,7 +297,7 @@ export default function Dashboard() {
 
           </div>
 
-          {/* Sidebar Area (30%) */}
+          {/* Intelligence Sidebar Area (30%) */}
           <div className="lg:col-span-3 space-y-8">
             
             {/* Data Strategy Panel */}
